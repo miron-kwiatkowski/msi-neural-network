@@ -17,6 +17,7 @@ from flax.training import train_state
 from jax import random, device_put
 import optax
 from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
 
 # Define a simplified neural network
 class SimpleCNN(nn.Module):
@@ -34,7 +35,7 @@ class SimpleCNN(nn.Module):
         x = nn.Dense(features=14)(x)  # 14 classes for 14 monsters
         return x
 
-# Load and preprocess data with resizing and augmentation
+# Load and preprocess data
 def load_data(data_dir, target_size=(128, 128)):
     images, labels = [], []
     label_map = {}
@@ -102,8 +103,10 @@ test_labels = device_put(test_labels)
 rng = random.PRNGKey(0)
 state = create_train_state(rng, learning_rate=0.001)
 
-batch_size = 64  # Adjusted for better GPU utilization
-num_epochs = 10
+batch_size = 64
+num_epochs = 30
+
+test_accuracies = []
 
 # Training loop
 for epoch in range(num_epochs):
@@ -135,7 +138,9 @@ for epoch in range(num_epochs):
         acc = eval_step(state, batch)
         total_acc += acc * len(batch_labels)
         count += len(batch_labels)
-    print(f"Epoch {epoch + 1}, Test accuracy: {total_acc / count:.4f}")
+    epoch_acc = float(total_acc / count)
+    test_accuracies.append(epoch_acc)
+    print(f"Epoch {epoch + 1}, Test accuracy: {epoch_acc:.4f}")
 
 # Save trained model parameters
 def save_params(params, path='model_params.npz'):
@@ -144,3 +149,14 @@ def save_params(params, path='model_params.npz'):
     print(f"Model parameters saved to {path}")
 
 save_params(state.params)
+
+# Generate and save accuracy plot
+plt.figure(figsize=(8, 5))
+plt.plot(range(1, num_epochs + 1), test_accuracies, marker='o', linestyle='-')
+plt.title("Test Accuracy over Epochs")
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.grid(True)
+plt.savefig("accuracy_plot.png")
+plt.close()
+print("Accuracy plot saved to accuracy_plot.png")
